@@ -1,35 +1,41 @@
 const std = @import("std");
+const print = std.debug.print;
 const raylib_build = @import("raylib/src/build.zig");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const exe = b.addExecutable(.{
-        .name = "basic_window",
-        .root_source_file = .{ .path = "zig_projects/basic_window/main.zig" },
-        .target = target,
-        .optimize = optimize,
-    });
+    new_run_step("basic_window", "", b, target, optimize);
+    new_run_step("asteroids", "", b, target, optimize);
+}
 
-    const raylib = raylib_build.addRaylib(b, target, optimize, .{});
-
-    const lazy_path_raylib = std.Build.LazyPath.relative("raylib/src");
-
-    exe.linkLibrary(raylib);
-    exe.addIncludePath(lazy_path_raylib);
-
-    b.installArtifact(exe);
-
+fn new_run_artifact(b: *std.Build, exe: *std.Build.Step.Compile) *std.Build.Step.Run {
     const run_cmd = b.addRunArtifact(exe);
-
-    const run_step = b.step("run", "Run the app");
-
     run_cmd.step.dependOn(b.getInstallStep());
-
     if (b.args) |args| {
         run_cmd.addArgs(args);
     }
+    return run_cmd;
+}
 
-    run_step.dependOn(&run_cmd.step);
+fn new_run_step(comptime step_name: []const u8, description: []const u8, b: *std.Build, target: std.zig.CrossTarget, optimize: std.builtin.OptimizeMode) void {
+    const step = b.step(step_name, description);
+
+    const exe = b.addExecutable(.{
+        .name = step_name,
+        .root_source_file = .{ .path = "zig_projects/" ++ step_name ++ "/main.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(exe);
+
+    // link raylib
+    const raylib = raylib_build.addRaylib(b, target, optimize, .{});
+    const path_raylib = std.Build.LazyPath.relative("raylib/src");
+    exe.linkLibrary(raylib);
+    exe.addIncludePath(path_raylib);
+
+    const run_cmd = new_run_artifact(b, exe);
+    step.dependOn(&run_cmd.step);
 }
