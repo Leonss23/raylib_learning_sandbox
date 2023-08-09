@@ -30,6 +30,10 @@ fn new_run_step(comptime step_name: []const u8, description: []const u8, b: *std
     });
     b.installArtifact(exe);
 
+    // add utils module
+    const utils = b.addModule("utils", .{ .source_file = .{ .path = "utils.zig" } });
+    exe.addModule("utils", utils);
+
     // link raylib
     const raylib = raylib_build.addRaylib(b, target, optimize, .{});
     const path_raylib = std.Build.LazyPath.relative("raylib/src");
